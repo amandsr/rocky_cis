@@ -1,14 +1,14 @@
 ---
 - name: Resolve Gmail IPv4 Address
-      delegate_to: localhost
-      become: false
-      ansible.builtin.shell: getent ahostsv4 smtp.gmail.com | awk '{ print $1 }' | head -n 1
-      register: gmail_ipv4
-      changed_when: false
+  delegate_to: localhost
+  become: false
+  ansible.builtin.shell: getent ahostsv4 smtp.gmail.com | awk '{ print $1 }' | head -n 1
+  register: gmail_ipv4
+  changed_when: false
 
-    - name: Debug Resolved IP
-      ansible.builtin.debug:
-        msg: "Targeting Gmail on IPv4: {{ gmail_ipv4.stdout }}"
+- name: Debug Resolved IP
+  ansible.builtin.debug:
+     msg: "Targeting Gmail on IPv4: {{ gmail_ipv4.stdout }}"
         
 - name: "🛑 DEBUG: Check DNS and Hosts File"
   delegate_to: localhost
