@@ -32,12 +32,12 @@
         msg: "Resolution: {{ dns_check.stdout }}"
 
 - name: "🛑 NETWORK DEBUG: Test TCP Socket"
-      delegate_to: localhost
-      become: false
-      ansible.builtin.command: >
-        python3 -c "import socket; s = socket.create_connection(('{{ gmail_ipv4.stdout }}', 465), timeout=5); print('SUCCESS: TCP Connection Opened'); s.close()"
-      register: socket_test
-      ignore_errors: true
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command: >
+    python3 -c "import socket; s = socket.create_connection(('{{ gmail_ipv4.stdout }}', 465), timeout=5); print('SUCCESS: TCP Connection Opened'); s.close()"
+  register: socket_test
+  ignore_errors: true
 
 - name: Show Network Result
   ansible.builtin.debug:
