@@ -1,4 +1,25 @@
 ---
+- name: "🛑 DEBUG: Check DNS and Hosts File"
+  delegate_to: localhost
+  become: false
+  block:
+    - name: Display /etc/hosts content
+      ansible.builtin.command: cat /etc/hosts
+      register: hosts_file
+
+    - name: Show Hosts File
+      ansible.builtin.debug:
+        msg: "{{ hosts_file.stdout_lines }}"
+
+    - name: Check what smtp.gmail.com resolves to
+      ansible.builtin.command: getent hosts smtp.gmail.com
+      register: dns_check
+      ignore_errors: true
+
+    - name: Show DNS Resolution
+      ansible.builtin.debug:
+        msg: "Resolution: {{ dns_check.stdout }}"
+
 # ==========================================
 # 1. PREPARE AND SCAN (Target Node)
 # ==========================================
