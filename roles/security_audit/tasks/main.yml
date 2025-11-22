@@ -80,7 +80,8 @@
         
         # Gmail requires authentication
         username: "{{ email_smtp_user }}"
-        password: "{{ email_smtp_password }}" # Injected by AWX Credential
+        password: "{{ lookup('env', 'ANS_SMTP_PASS') }}"
+        #password: "{{ email_smtp_password }}" # Injected by AWX Credential
         
         # Gmail requires STARTTLS on port 587
         secure: starttls 
