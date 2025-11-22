@@ -3,6 +3,22 @@
 # 1. PREPARE AND SCAN (Target Node)
 # ==========================================
 
+- name: "🛑 DEEP DEBUG: Inspecting Credentials"
+  delegate_to: localhost
+  become: false
+  block:
+    - name: Check Environment Variables
+      ansible.builtin.debug:
+        msg: 
+          - "1. Checking Env Var 'ANS_SMTP_PASS': {{ lookup('env', 'ANS_SMTP_PASS') | length > 0 }}"
+          - "2. Checking Ansible Var 'email_smtp_password': {{ email_smtp_password | default('UNDEFINED') }}"
+          - "3. Checking if 'ANS_SMTP_PASS' exists in System Env: {{ 'ANS_SMTP_PASS' in ansible_env }}"
+          
+    # This will list ALL environment variables (safe versions) so you can see if your variable is named differently
+    - name: List All Env Vars (Keys Only)
+      ansible.builtin.debug:
+        msg: "Available Env Vars: {{ ansible_env.keys() | list }}"
+
 - name: Install OpenSCAP Scanner and Utils
   ansible.builtin.dnf:
     name:
