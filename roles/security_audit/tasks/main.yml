@@ -39,9 +39,9 @@
       register: socket_test
       ignore_errors: true
 
-    - name: Show Network Result
-      ansible.builtin.debug:
-        msg: "Connection Test Result: {{ socket_test.stdout | default(socket_test.stderr) }}"
+- name: Show Network Result
+  ansible.builtin.debug:
+    msg: "Connection Test Result: {{ socket_test.stdout | default(socket_test.stderr) }}"
 
 # ==========================================
 # 1. PREPARE AND SCAN (Target Node)
