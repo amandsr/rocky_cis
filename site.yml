@@ -1,0 +1,20 @@
+---
+- name: Patch System and Run CIS Compliance Scan
+  hosts: all
+  become: true
+  gather_facts: true
+
+  # Ensure local folder exists on AWX node before fetching
+  pre_tasks:
+    - name: Create local report directory on Controller
+      ansible.builtin.file:
+        path: "{{ local_report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+  roles:
+    - role: patch_management
+    - role: security_audit

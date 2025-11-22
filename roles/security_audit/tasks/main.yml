@@ -1,0 +1,112 @@
+---
+# ==========================================
+# 1. PREPARE AND SCAN (Target Node)
+# ==========================================
+
+- name: Install OpenSCAP Scanner and Utils
+  ansible.builtin.dnf:
+    name:
+      - openscap-scanner
+      - scap-security-guide
+    state: present
+
+- name: Set timestamp variable
+  ansible.builtin.set_fact:
+    report_date: "{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}"
+
+- name: Define file paths
+  ansible.builtin.set_fact:
+    remote_report_path: "/tmp/report_{{ inventory_hostname }}_{{ report_date }}.html"
+    remote_arf_path: "/tmp/arf_{{ inventory_hostname }}_{{ report_date }}.xml"
+    # This variable aligns with your email block logic
+    local_report_path: "{{ local_report_dir }}/{{ inventory_hostname }}_report_{{ report_date }}.html"
+
+- name: Run OpenSCAP Evaluation (CIS Benchmark)
+  ansible.builtin.command: >
+    oscap xccdf eval
+    --profile {{ scap_profile }}
+    --results-arf {{ remote_arf_path }}
+    --report {{ remote_report_path }}
+    {{ scap_content_path }}
+  register: oscap_result
+  failed_when: oscap_result.rc not in [0, 2]
+  changed_when: true
+
+- name: Validate Report Exists
+  ansible.builtin.stat:
+    path: "{{ remote_report_path }}"
+  register: report_stat
+
+- name: Fail if report generation failed
+  ansible.builtin.fail:
+    msg: "Report is empty or missing."
+  when: not report_stat.stat.exists or report_stat.stat.size == 0
+
+# ==========================================
+# 2. FETCH REPORT (Target -> Controller)
+# ==========================================
+
+- name: Fetch report to AWX Controller
+  ansible.builtin.fetch:
+    src: "{{ remote_report_path }}"
+    dest: "{{ local_report_path }}"
+    flat: yes
+  register: fetched_report 
+  # ^ IMPORTANT: We register this variable so your email block can use 'fetched_report'
+
+# ==========================================
+# 3. PROCESS REPORT (Controller Node)
+# ==========================================
+
+- name: "Process Reports on Controller (S3 and Email)"
+  delegate_to: localhost
+  become: false
+  block:
+    # --- S3 UPLOAD ---
+    - name: Upload Report to S3 Bucket
+      amazon.aws.s3_object:
+        bucket: "{{ s3_bucket_name }}"
+        object: "reports/{{ inventory_hostname }}/{{ report_date }}.html"
+        src: "{{ local_report_path }}"
+        mode: put
+        region: "{{ aws_region }}"
+      # Ensure AWS Credentials are set in AWX Job Template
+
+    # --- YOUR EMAIL BLOCK (Integrated) ---
+    - name: Send email with HTML report
+      community.general.mail:
+        host: "{{ email_smtp_host }}"
+        port: "{{ email_smtp_port }}"
+        
+        # Gmail requires authentication
+        username: "{{ email_smtp_user }}"
+        password: "{{ email_smtp_password }}" # Injected by AWX Credential
+        
+        # Gmail requires STARTTLS on port 587
+        secure: starttls 
+        
+        to: "{{ email_recipient }}"
+        from: "{{ email_sender }}"
+        subject: "Ansible Hardening Report for {{ inventory_hostname }}"
+        body: "{{ lookup('file', local_report_path) }}"
+        subtype: html
+        attach: "{{ [local_report_path] if fetched_report is defined and not fetched_report.failed else [] }}"
+  # Cleanup happens after the block finishes
+  always:
+    - name: Cleanup local temporary file
+      ansible.builtin.file:
+        path: "{{ local_report_path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+
+# ==========================================
+# 4. CLEANUP (Target Node)
+# ==========================================
+- name: Cleanup remote temporary files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ remote_report_path }}"
+    - "{{ remote_arf_path }}"

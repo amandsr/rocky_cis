@@ -1,0 +1,41 @@
+---
+- name: Check for available updates
+  ansible.builtin.dnf:
+    list: updates
+  register: dnf_check_output
+  changed_when: false
+
+- name: Report number of packages available for update
+  ansible.builtin.debug:
+    msg: "Packages pending update: {{ dnf_check_output.results | length }}"
+
+- name: Apply all updates
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+  register: dnf_update_result
+
+- name: Check if reboot is required (rpm-ostree or yum-utils method)
+  ansible.builtin.command: needs-restarting -r
+  register: reboot_required
+  ignore_errors: true
+  changed_when: false
+  failed_when: false
+
+- name: Reboot server if updates applied or kernel changed
+  ansible.builtin.reboot:
+    msg: "Rebooting server following system patching"
+    connect_timeout: 5
+    reboot_timeout: 600
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+  when: dnf_update_result.changed or reboot_required.rc == 1
+
+- name: Verify server is up and capture Kernel version
+  ansible.builtin.shell: uname -r
+  register: kernel_version
+  changed_when: false
+
+- name: Display Post-Patch Kernel
+  ansible.builtin.debug:
+    msg: "Server Online. Running Kernel: {{ kernel_version.stdout }}"

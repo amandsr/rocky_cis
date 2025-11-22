@@ -1,0 +1,19 @@
+---
+# S3 Config
+s3_bucket_name: "osttra-audit-reports"
+aws_region: "us-east-1"
+
+# Email Config
+email_recipient: "amandeep.singh4@osttra.com"
+email_sender: "amandeep.rattan@gmail.com"
+
+# SMTP Server Config
+email_smtp_host: "smtp.gmail.com"
+email_smtp_port: 587
+email_smtp_user: "amandeep.rattan@gmail.com" 
+# email_smtp_password:   <-- DO NOT DEFINE HERE. It is injected by AWX Credential.
+
+# --- Security Scan Configuration ---
+scap_profile: "xccdf_org.ssgproject.content_profile_cis"
+scap_content_path: "/usr/share/xml/scap/ssg/content/ssg-rl9-ds.xml"
+local_report_dir: "/tmp/ansible_reports"
